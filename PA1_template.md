@@ -1,0 +1,244 @@
+# Reproducible Research: Peer Assessment 1
+
+
+## Loading and preprocessing the data
+
+```r
+myData <- read.csv("activity.csv")
+myProcData <- myData[is.na(myData$steps)=="FALSE",]
+```
+
+## What is mean total number of steps taken per day?
+
+```r
+ii <- 2:length(myProcData$steps)
+tempDate <- myProcData$date[1]
+tempSum <- myProcData$steps[1]
+totalSum <- matrix()
+j <- 1
+for (i in ii)
+{
+  currentDate <- myProcData$date[i]
+  if(currentDate == tempDate)
+  {
+    tempSum <- tempSum + myProcData$steps[i]
+  }
+  else
+  {
+      totalSum[j] <- tempSum
+      j <- j + 1
+      tempSum <- myProcData$steps[i]
+      tempDate <- myProcData$date[i]
+  }
+}
+totalSum[j] <- tempSum ## total sum of the last analyzed data
+```
+
+
+```r
+hist(totalSum) ## Histogram of the total number of steps taken each day
+```
+
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3.png) 
+
+
+```r
+mean(totalSum) ## Mean of steps taken per day
+```
+
+```
+## [1] 10766
+```
+
+```r
+median(totalSum) ## Median of steps taken per day
+```
+
+```
+## [1] 10765
+```
+
+## What is the average daily activity pattern?
+
+
+```r
+mySortInd <- order(as.numeric(myProcData$interval), myProcData$interval)
+mySortData <- myProcData[mySortInd,]
+
+ii <- 2:length(mySortInd)
+tempInterval <- mySortData$interval[1]
+tempSum <- mySortData$steps[1]
+cc <- 1
+averageVector <- matrix()
+intervalVector <- matrix()
+j <- 1
+for (i in ii)
+{
+  currentInterval <- mySortData$interval[i]
+  if(currentInterval == tempInterval)
+  {
+    tempSum <- tempSum + mySortData$steps[i]
+    cc <- cc + 1
+  }
+  else
+  {
+      averageVector[j] <- tempSum/cc ## Mean
+      intervalVector[j] <- tempInterval
+      j <- j + 1
+      tempSum <- mySortData$steps[i]
+      cc <- 1
+      tempInterval <- mySortData$interval[i]
+  }
+}
+averageVector[j] <- tempSum/cc ## Mean last 
+intervalVector[j] <- tempInterval ## last Interval
+```
+
+
+```r
+plot(intervalVector,averageVector, type = "l")
+```
+
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6.png) 
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+
+```r
+intervalVector[averageVector == max(averageVector)]
+```
+
+```
+## [1] 835
+```
+
+
+## Imputing missing values
+
+```r
+sum(is.na(myData$steps) == "TRUE") ## Total number of missing values in the dataset
+```
+
+```
+## [1] 2304
+```
+
+```r
+## Imputing by the the mean for that 5-minute interval
+
+myNewData <- myData
+
+dims <- dim(myNewData)
+
+ii <- 1:dims[1]
+for (i in ii)
+{
+  
+  if (is.na(myData$steps[i]))
+    {
+      myNewData$steps[i] <- averageVector[intervalVector == myData$interval[i]]
+    }
+}
+
+## Histogram of myNewData
+ii <- 2:length(myNewData$steps)
+tempDate <- myNewData$date[1]
+tempSum <- myNewData$steps[1]
+totalSum <- matrix()
+j <- 1
+for (i in ii)
+{
+  currentDate <- myNewData$date[i]
+  if(currentDate == tempDate)
+  {
+    tempSum <- tempSum + myNewData$steps[i]
+  }
+  else
+  {
+      totalSum[j] <- tempSum
+      j <- j + 1
+      tempSum <- myNewData$steps[i]
+      tempDate <- myNewData$date[i]
+  }
+}
+totalSum[j] <- tempSum ## total sum of the last analyzed data
+```
+
+
+```r
+hist(totalSum) ## Histogram of the total number of steps taken each day
+```
+
+![plot of chunk unnamed-chunk-9](figure/unnamed-chunk-9.png) 
+
+
+```r
+## Slight changes in mean and median
+mean(totalSum) ## Mean of steps taken per day
+```
+
+```
+## [1] 10766
+```
+
+```r
+median(totalSum) ## Median of steps taken per day
+```
+
+```
+## [1] 10766
+```
+
+## Are there differences in activity patterns between weekdays and weekends?
+
+
+```r
+myNewData$day <- as.POSIXlt(myNewData$date)$wday
+
+WE <- myNewData$day != 6 & myNewData$day != 0
+
+myNewData$WE <- WE
+
+mySortInd <- order(as.numeric(myNewData$interval), myNewData$interval)
+mySortData <- myNewData[mySortInd,]
+
+ii <- 2:length(mySortInd)
+tempInterval <-  mySortData$interval[1]
+tempAve <- matrix(,1,2)
+averageVector <- matrix(,1,2)
+intervalVector <- matrix(,1,2)
+j <- 1
+for (i in ii)
+{
+  currentInterval <- mySortData$interval[i]
+  if(currentInterval != tempInterval){
+    test <- mySortData[mySortData$interval==tempInterval,]
+    tempAve[1,1] <-sum(test$steps[test$WE=="TRUE"])/sum(test$WE=="TRUE")
+    tempAve[1,2] <-sum(test$steps[test$WE=="FALSE"])/sum(test$WE=="FALSE")
+    averageVector <- rbind(averageVector,tempAve)
+    intervalVector[j] <- tempInterval
+    j <- j+1
+    tempInterval <- currentInterval
+  }
+}
+intervalVector[j] <- tempInterval ## last Interval
+test <- mySortData[mySortData$interval==tempInterval,]
+tempAve[1,1] <-sum(test$steps[test$WE=="TRUE"])/sum(test$WE=="TRUE")
+tempAve[1,2] <-sum(test$steps[test$WE=="FALSE"])/sum(test$WE=="FALSE")
+averageVector <- rbind(averageVector,tempAve)
+averageVector <- averageVector[2:(length(intervalVector)+1),]
+```
+
+
+```r
+plot(intervalVector,averageVector[,1], main = "Weekdays", type = "l")
+```
+
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12.png) 
+
+
+```r
+plot(intervalVector,averageVector[,2], main = "Weekends", type = "l")
+```
+
+![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13.png) 
